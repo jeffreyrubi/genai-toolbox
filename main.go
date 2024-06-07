@@ -14,8 +14,8 @@
 
 package main
 
-import "github.com/googleapis/genai-toolbox/cmd"
+import "fmt"
 
 func main() {
-	cmd.Execute()
+    fmt.Println("hello world")
 }
