@@ -36,30 +36,31 @@ type CloudSQLPgGenericConfig struct {
 	Parameters  []Parameter `yaml:"parameters"`
 }
 
-func (r CloudSQLPgGenericConfig) toolKind() string {
+func (cfg CloudSQLPgGenericConfig) toolKind() string {
 	return CloudSQLPgSQLGenericKind
 }
 
-func (r CloudSQLPgGenericConfig) Initialize(srcs map[string]sources.Source) (Tool, error) {
+func (cfg CloudSQLPgGenericConfig) Initialize(srcs map[string]sources.Source) (Tool, error) {
 	// verify source exists
-	rawS, ok := srcs[r.Source]
+	rawS, ok := srcs[cfg.Source]
 	if !ok {
-		return nil, fmt.Errorf("No source named %q configured!", r.Source)
+		return nil, fmt.Errorf("no source named %q configured", cfg.Source)
 	}
 
 	// verify the source is the right kind
 	s, ok := rawS.(sources.CloudSQLPgSource)
 	if !ok {
-		return nil, fmt.Errorf("Sources for %q tools must be of kind %q!", CloudSQLPgSQLGenericKind, sources.CloudSQLPgKind)
+		return nil, fmt.Errorf("sources for %q tools must be of kind %q", CloudSQLPgSQLGenericKind, sources.CloudSQLPgKind)
 	}
 
 	// finish tool setup
 	t := CloudSQLPgGenericTool{
-		Name:       r.Name,
+		Name:       cfg.Name,
 		Kind:       CloudSQLPgSQLGenericKind,
 		Source:     s,
-		Statement:  r.Statement,
-		Parameters: r.Parameters,
+		Statement:  cfg.Statement,
+		Parameters: cfg.Parameters,
+		manifest:   Manifest{cfg.Description, cfg.Parameters},
 	}
 	return t, nil
 }
@@ -73,20 +74,21 @@ type CloudSQLPgGenericTool struct {
 	Source     sources.CloudSQLPgSource
 	Statement  string
 	Parameters []Parameter `yaml:"parameters"`
+	manifest   Manifest
 }
 
 func (t CloudSQLPgGenericTool) Invoke(params []any) (string, error) {
 	fmt.Printf("Invoked tool %s\n", t.Name)
 	results, err := t.Source.Pool.Query(context.Background(), t.Statement, params...)
 	if err != nil {
-		return "", fmt.Errorf("Unable to execute query: %w", err)
+		return "", fmt.Errorf("unable to execute query: %w", err)
 	}
 
 	var out strings.Builder
 	for results.Next() {
 		v, err := results.Values()
 		if err != nil {
-			return "", fmt.Errorf("Unable to parse row: %w", err)
+			return "", fmt.Errorf("unable to parse row: %w", err)
 		}
 		out.WriteString(fmt.Sprintf("%s", v))
 	}
@@ -95,5 +97,9 @@ func (t CloudSQLPgGenericTool) Invoke(params []any) (string, error) {
 }
 
 func (t CloudSQLPgGenericTool) ParseParams(data map[string]any) ([]any, error) {
-	return parseParams(t.Parameters, data)
+	return ParseParams(t.Parameters, data)
+}
+
+func (t CloudSQLPgGenericTool) Manifest() Manifest {
+	return t.manifest
 }

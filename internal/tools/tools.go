@@ -66,6 +66,7 @@ func (c *Configs) UnmarshalYAML(node *yaml.Node) error {
 type Tool interface {
 	Invoke([]any) (string, error)
 	ParseParams(data map[string]any) ([]any, error)
+	Manifest() Manifest
 }
 
 type Parameter struct {
@@ -85,8 +86,8 @@ func (e ParseTypeError) Error() string {
 	return fmt.Sprintf("Error parsing parameter %q: %q not type %q", e.Name, e.Value, e.Type)
 }
 
-// ParseParams is a helper function for parsing Parameters from an arbitratyJSON object.
-func parseParams(ps []Parameter, data map[string]any) ([]any, error) {
+// ParseParams is a helper function for parsing Parameters from an arbitraryJSON object.
+func ParseParams(ps []Parameter, data map[string]any) ([]any, error) {
 	params := []any{}
 	for _, p := range ps {
 		v, ok := data[p.Name]
@@ -109,4 +110,9 @@ func parseParams(ps []Parameter, data map[string]any) ([]any, error) {
 		params = append(params, v)
 	}
 	return params, nil
+}
+
+type Manifest struct {
+	Description string      `json:"description"`
+	Parameters  []Parameter `json:"parameters"`
 }

@@ -109,21 +109,21 @@ func run(cmd *Command) error {
 	// Read tool file contents
 	buf, err := os.ReadFile(cmd.tools_file)
 	if err != nil {
-		return fmt.Errorf("Unable to read tool file at %q: %w", cmd.tools_file, err)
+		return fmt.Errorf("unable to read tool file at %q: %w", cmd.tools_file, err)
 	}
 	cmd.cfg.SourceConfigs, cmd.cfg.ToolConfigs, cmd.cfg.ToolsetConfigs, err = parseToolsFile(buf)
 	if err != nil {
-		return fmt.Errorf("Unable to parse tool file at %q: %w", cmd.tools_file, err)
+		return fmt.Errorf("unable to parse tool file at %q: %w", cmd.tools_file, err)
 	}
 
 	// run server
 	s, err := server.NewServer(cmd.cfg)
 	if err != nil {
-		return fmt.Errorf("Toolbox failed to start with the following error: %w", err)
+		return fmt.Errorf("toolbox failed to start with the following error: %w", err)
 	}
 	err = s.ListenAndServe(ctx)
 	if err != nil {
-		return fmt.Errorf("Toolbox crashed with the following error: %w", err)
+		return fmt.Errorf("toolbox crashed with the following error: %w", err)
 	}
 
 	return nil
