@@ -27,8 +27,12 @@ func (t MockTool) ParseParams(data map[string]any) ([]any, error) {
 	return tools.ParseParams(t.Params, data)
 }
 
-func (t MockTool) Manifest() tools.Manifest {
-	return tools.Manifest{Description: t.Description, Parameters: t.Params}
+func (t MockTool) Manifest() tools.ToolManifest {
+	pMs := make([]tools.ParameterManifest, 0, len(t.Params))
+	for _, p := range t.Params {
+		pMs = append(pMs, p.Manifest())
+	}
+	return tools.ToolManifest{Description: t.Description, Parameters: pMs}
 }
 
 func TestToolsetEndpoint(t *testing.T) {
@@ -39,17 +43,9 @@ func TestToolsetEndpoint(t *testing.T) {
 	}
 	tool2 := MockTool{
 		Name: "some_params",
-		Params: []tools.Parameter{
-			{
-				Name:        "param1",
-				Type:        "int",
-				Description: "This is the first parameter.",
-			},
-			{
-				Name:        "param2",
-				Type:        "string",
-				Description: "This is the second parameter.",
-			},
+		Params: tools.Parameters{
+			tools.NewIntParameter("param1", "This is the first parameter."),
+			tools.NewIntParameter("param2", "This is the second parameter."),
 		},
 	}
 	toolsMap := map[string]tools.Tool{tool1.Name: tool1, tool2.Name: tool2}
