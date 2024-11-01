@@ -18,8 +18,8 @@ import (
 	"github.com/googleapis/genai-toolbox/internal/sources"
 )
 
-type Config interface {
-	ToolKind() string
+type ToolConfig interface {
+	ToolConfigKind() string
 	Initialize(map[string]sources.Source) (Tool, error)
 }
 
