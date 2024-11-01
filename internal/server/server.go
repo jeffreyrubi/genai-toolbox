@@ -30,7 +30,7 @@ import (
 
 // Server contains info for running an instance of Toolbox. Should be instantiated with NewServer().
 type Server struct {
-	conf Config
+	conf ServerConfig
 	root chi.Router
 
 	sources  map[string]sources.Source
@@ -39,7 +39,7 @@ type Server struct {
 }
 
 // NewServer returns a Server object based on provided Config.
-func NewServer(cfg Config) (*Server, error) {
+func NewServer(cfg ServerConfig) (*Server, error) {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
@@ -76,7 +76,7 @@ func NewServer(cfg Config) (*Server, error) {
 		allToolNames = append(allToolNames, name)
 	}
 	if cfg.ToolsetConfigs == nil {
-		cfg.ToolsetConfigs = make(tools.ToolsetConfigs)
+		cfg.ToolsetConfigs = make(ToolsetConfigs)
 	}
 	cfg.ToolsetConfigs[""] = tools.ToolsetConfig{Name: "", ToolNames: allToolNames}
 	// initalize and validate the toolsets

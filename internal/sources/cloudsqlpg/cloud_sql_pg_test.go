@@ -12,48 +12,43 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tools_test
+package cloudsqlpg_test
 
 import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/googleapis/genai-toolbox/internal/server"
+	"github.com/googleapis/genai-toolbox/internal/sources/cloudsqlpg"
 	"github.com/googleapis/genai-toolbox/internal/testutils"
-	"github.com/googleapis/genai-toolbox/internal/tools"
 	"gopkg.in/yaml.v3"
 )
 
-func TestParseFromYamlPostgres(t *testing.T) {
+func TestParseFromYamlCloudSQLPg(t *testing.T) {
 	tcs := []struct {
 		desc string
 		in   string
-		want tools.Configs
+		want server.SourceConfigs
 	}{
 		{
 			desc: "basic example",
 			in: `
-			tools:
-				example_tool:
-					kind: postgres-generic
-					source: my-pg-instance
-					description: some description
-					statement: |
-						SELECT * FROM SQL_STATEMENT;
-					parameters:
-						- name: country
-						  type: string
-						  description: some description
+			sources:
+				my-pg-instance:
+					kind: cloud-sql-postgres
+					project: my-project
+					region: my-region
+					instance: my-instance
+					database: my_db
 			`,
-			want: tools.Configs{
-				"example_tool": tools.PostgresGenericConfig{
-					Name:        "example_tool",
-					Kind:        tools.PostgresSQLGenericKind,
-					Source:      "my-pg-instance",
-					Description: "some description",
-					Statement:   "SELECT * FROM SQL_STATEMENT;\n",
-					Parameters: []tools.Parameter{
-						tools.NewStringParameter("country", "some description"),
-					},
+			want: server.SourceConfigs{
+				"my-pg-instance": cloudsqlpg.Config{
+					Name:     "my-pg-instance",
+					Kind:     cloudsqlpg.SourceKind,
+					Project:  "my-project",
+					Region:   "my-region",
+					Instance: "my-instance",
+					Database: "my_db",
 				},
 			},
 		},
@@ -61,15 +56,15 @@ func TestParseFromYamlPostgres(t *testing.T) {
 	for _, tc := range tcs {
 		t.Run(tc.desc, func(t *testing.T) {
 			got := struct {
-				Tools tools.Configs `yaml:"tools"`
+				Sources server.SourceConfigs `yaml:"sources"`
 			}{}
 			// Parse contents
 			err := yaml.Unmarshal(testutils.FormatYaml(tc.in), &got)
 			if err != nil {
 				t.Fatalf("unable to unmarshal: %s", err)
 			}
-			if diff := cmp.Diff(tc.want, got.Tools); diff != "" {
-				t.Fatalf("incorrect parse: diff %v", diff)
+			if !cmp.Equal(tc.want, got.Sources) {
+				t.Fatalf("incorrect parse: want %v, got %v", tc.want, got.Sources)
 			}
 		})
 	}

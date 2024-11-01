@@ -23,9 +23,10 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/googleapis/genai-toolbox/internal/server"
-	"github.com/googleapis/genai-toolbox/internal/sources"
+	cloudsqlpgsrc "github.com/googleapis/genai-toolbox/internal/sources/cloudsqlpg"
 	"github.com/googleapis/genai-toolbox/internal/testutils"
 	"github.com/googleapis/genai-toolbox/internal/tools"
+	cloudsqlpgtool "github.com/googleapis/genai-toolbox/internal/tools/cloudsqlpg"
 	"github.com/spf13/cobra"
 )
 
@@ -73,12 +74,12 @@ func TestAddrPort(t *testing.T) {
 	tcs := []struct {
 		desc string
 		args []string
-		want server.Config
+		want server.ServerConfig
 	}{
 		{
 			desc: "default values",
 			args: []string{},
-			want: server.Config{
+			want: server.ServerConfig{
 				Address: "127.0.0.1",
 				Port:    5000,
 			},
@@ -86,7 +87,7 @@ func TestAddrPort(t *testing.T) {
 		{
 			desc: "address short",
 			args: []string{"-a", "127.0.1.1"},
-			want: server.Config{
+			want: server.ServerConfig{
 				Address: "127.0.1.1",
 				Port:    5000,
 			},
@@ -94,7 +95,7 @@ func TestAddrPort(t *testing.T) {
 		{
 			desc: "address long",
 			args: []string{"--address", "0.0.0.0"},
-			want: server.Config{
+			want: server.ServerConfig{
 				Address: "0.0.0.0",
 				Port:    5000,
 			},
@@ -102,7 +103,7 @@ func TestAddrPort(t *testing.T) {
 		{
 			desc: "port short",
 			args: []string{"-p", "5052"},
-			want: server.Config{
+			want: server.ServerConfig{
 				Address: "127.0.0.1",
 				Port:    5052,
 			},
@@ -110,7 +111,7 @@ func TestAddrPort(t *testing.T) {
 		{
 			desc: "port long",
 			args: []string{"--port", "5050"},
-			want: server.Config{
+			want: server.ServerConfig{
 				Address: "127.0.0.1",
 				Port:    5050,
 			},
@@ -169,9 +170,9 @@ func TestParseToolFile(t *testing.T) {
 	tcs := []struct {
 		description  string
 		in           string
-		wantSources  sources.Configs
-		wantTools    tools.Configs
-		wantToolsets tools.ToolsetConfigs
+		wantSources  server.SourceConfigs
+		wantTools    server.ToolConfigs
+		wantToolsets server.ToolsetConfigs
 	}{
 		{
 			description: "basic example",
@@ -198,20 +199,20 @@ func TestParseToolFile(t *testing.T) {
 				example_toolset:
 					- example_tool
 			`,
-			wantSources: sources.Configs{
-				"my-pg-instance": sources.CloudSQLPgConfig{
+			wantSources: server.SourceConfigs{
+				"my-pg-instance": cloudsqlpgsrc.Config{
 					Name:     "my-pg-instance",
-					Kind:     sources.CloudSQLPgKind,
+					Kind:     cloudsqlpgsrc.SourceKind,
 					Project:  "my-project",
 					Region:   "my-region",
 					Instance: "my-instance",
 					Database: "my_db",
 				},
 			},
-			wantTools: tools.Configs{
-				"example_tool": tools.CloudSQLPgGenericConfig{
+			wantTools: server.ToolConfigs{
+				"example_tool": cloudsqlpgtool.GenericConfig{
 					Name:        "example_tool",
-					Kind:        tools.CloudSQLPgSQLGenericKind,
+					Kind:        cloudsqlpgtool.ToolKind,
 					Source:      "my-pg-instance",
 					Description: "some description",
 					Statement:   "SELECT * FROM SQL_STATEMENT;\n",
@@ -220,7 +221,7 @@ func TestParseToolFile(t *testing.T) {
 					},
 				},
 			},
-			wantToolsets: tools.ToolsetConfigs{
+			wantToolsets: server.ToolsetConfigs{
 				"example_toolset": tools.ToolsetConfig{
 					Name:      "example_toolset",
 					ToolNames: []string{"example_tool"},
