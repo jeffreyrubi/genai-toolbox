@@ -56,6 +56,18 @@ func (p ParamValues) AsMap() map[string]interface{} {
 	return params
 }
 
+// AsMapByOrderedKeys returns a map of a key's position to it's value, as neccesary for Spanner PSQL. 
+// Example { $1 -> "value1", $2 -> "value2" }
+func (p ParamValues) AsMapByOrderedKeys() map[string]interface{} {
+	params := make(map[string]interface{})
+
+	for i, p := range p {
+		key := fmt.Sprintf("p%d", i+1)
+		params[key] = p.Value
+	}
+	return params
+}
+
 // ParseParams parses specified Parameters from data and returns them as ParamValues.
 func ParseParams(ps Parameters, data map[string]any) (ParamValues, error) {
 	params := make([]ParamValue, 0, len(ps))
