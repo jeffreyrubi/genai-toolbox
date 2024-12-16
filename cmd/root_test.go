@@ -150,6 +150,41 @@ func TestServerConfigFlags(t *testing.T) {
 	}
 }
 
+func TestToolFileFlag(t *testing.T) {
+	tcs := []struct {
+		desc string
+		args []string
+		want string
+	}{
+		{
+			desc: "default value",
+			args: []string{},
+			want: "tools.yaml",
+		},
+		{
+			desc: "foo file",
+			args: []string{"--tools_file", "foo.yaml"},
+			want: "foo.yaml",
+		},
+		{
+			desc: "address long",
+			args: []string{"--tools_file", "bar.yaml"},
+			want: "bar.yaml",
+		},
+	}
+	for _, tc := range tcs {
+		t.Run(tc.desc, func(t *testing.T) {
+			c, _, err := invokeCommand(tc.args)
+			if err != nil {
+				t.Fatalf("unexpected error invoking command: %s", err)
+			}
+			if c.tools_file != tc.want {
+				t.Fatalf("got %v, want %v", c.cfg, tc.want)
+			}
+		})
+	}
+}
+
 func TestFailServerConfigFlags(t *testing.T) {
 	tcs := []struct {
 		desc string
@@ -198,42 +233,94 @@ func TestDefaultLogLevel(t *testing.T) {
 	}
 }
 
-func TestToolFileFlag(t *testing.T) {
+func TestParseToolFile(t *testing.T) {
 	tcs := []struct {
-		desc string
-		args []string
-		want string
+		description   string
+		in            string
+		wantToolsFile ToolsFile
 	}{
 		{
-			desc: "default value",
-			args: []string{},
-			want: "tools.yaml",
-		},
-		{
-			desc: "foo file",
-			args: []string{"--tools_file", "foo.yaml"},
-			want: "foo.yaml",
-		},
-		{
-			desc: "address long",
-			args: []string{"--tools_file", "bar.yaml"},
-			want: "bar.yaml",
+			description: "basic example",
+			in: `
+			sources:
+				my-pg-instance:
+					kind: cloud-sql-postgres
+					project: my-project
+					region: my-region
+					instance: my-instance
+					database: my_db
+			tools:
+				example_tool:
+					kind: postgres-sql
+					source: my-pg-instance
+					description: some description
+					statement: |
+						SELECT * FROM SQL_STATEMENT;
+					parameters:
+						- name: country
+							type: string
+							description: some description
+			toolsets:
+				example_toolset:
+					- example_tool
+			`,
+			wantToolsFile: ToolsFile{
+				Sources: server.SourceConfigs{
+					"my-pg-instance": cloudsqlpgsrc.Config{
+						Name:     "my-pg-instance",
+						Kind:     cloudsqlpgsrc.SourceKind,
+						Project:  "my-project",
+						Region:   "my-region",
+						Instance: "my-instance",
+						IPType:   "public",
+						Database: "my_db",
+					},
+				},
+				Tools: server.ToolConfigs{
+					"example_tool": postgressql.Config{
+						Name:        "example_tool",
+						Kind:        postgressql.ToolKind,
+						Source:      "my-pg-instance",
+						Description: "some description",
+						Statement:   "SELECT * FROM SQL_STATEMENT;\n",
+						Parameters: []tools.Parameter{
+							tools.NewStringParameter("country", "some description"),
+						},
+					},
+				},
+				Toolsets: server.ToolsetConfigs{
+					"example_toolset": tools.ToolsetConfig{
+						Name:      "example_toolset",
+						ToolNames: []string{"example_tool"},
+					},
+				},
+			},
 		},
 	}
 	for _, tc := range tcs {
-		t.Run(tc.desc, func(t *testing.T) {
-			c, _, err := invokeCommand(tc.args)
+		t.Run(tc.description, func(t *testing.T) {
+			toolsFile, err := parseToolsFile(testutils.FormatYaml(tc.in))
 			if err != nil {
-				t.Fatalf("unexpected error invoking command: %s", err)
+				t.Fatalf("failed to parse input: %v", err)
 			}
-			if c.tools_file != tc.want {
-				t.Fatalf("got %v, want %v", c.cfg, tc.want)
+			if diff := cmp.Diff(tc.wantToolsFile.Sources, toolsFile.Sources); diff != "" {
+				t.Fatalf("incorrect sources parse: diff %v", diff)
+			}
+			if diff := cmp.Diff(tc.wantToolsFile.AuthSources, toolsFile.AuthSources); diff != "" {
+				t.Fatalf("incorrect authSources parse: diff %v", diff)
+			}
+			if diff := cmp.Diff(tc.wantToolsFile.Tools, toolsFile.Tools); diff != "" {
+				t.Fatalf("incorrect tools parse: diff %v", diff)
+			}
+			if diff := cmp.Diff(tc.wantToolsFile.Toolsets, toolsFile.Toolsets); diff != "" {
+				t.Fatalf("incorrect tools parse: diff %v", diff)
 			}
 		})
 	}
+
 }
 
-func TestParseToolFile(t *testing.T) {
+func TestParseToolFileWithAuth(t *testing.T) {
 	tcs := []struct {
 		description   string
 		in            string
@@ -253,6 +340,10 @@ func TestParseToolFile(t *testing.T) {
 				my-google-service:
 					kind: google
 					clientId: my-client-id
+				other-google-service:
+					kind: google
+					clientId: other-client-id
+
 			tools:
 				example_tool:
 					kind: postgres-sql
@@ -264,6 +355,21 @@ func TestParseToolFile(t *testing.T) {
 						- name: country
 						  type: string
 						  description: some description
+						- name: id
+						  type: integer
+						  description: user id
+						  authSources:
+							- name: my-google-service
+								field: user_id
+						- name: email
+							type: string
+							description: user email
+							authSources:
+							- name: my-google-service
+							  field: email
+							- name: other-google-service
+							  field: other_email
+
 			toolsets:
 				example_toolset:
 					- example_tool
@@ -286,6 +392,11 @@ func TestParseToolFile(t *testing.T) {
 						Kind:     google.AuthSourceKind,
 						ClientID: "my-client-id",
 					},
+					"other-google-service": google.Config{
+						Name:     "other-google-service",
+						Kind:     google.AuthSourceKind,
+						ClientID: "other-client-id",
+					},
 				},
 				Tools: server.ToolConfigs{
 					"example_tool": postgressql.Config{
@@ -296,6 +407,8 @@ func TestParseToolFile(t *testing.T) {
 						Statement:   "SELECT * FROM SQL_STATEMENT;\n",
 						Parameters: []tools.Parameter{
 							tools.NewStringParameter("country", "some description"),
+							tools.NewIntParameterWithAuth("id", "user id", []tools.ParamAuthSource{{Name: "my-google-service", Field: "user_id"}}),
+							tools.NewStringParameterWithAuth("email", "user email", []tools.ParamAuthSource{{Name: "my-google-service", Field: "email"}, {Name: "other-google-service", Field: "other_email"}}),
 						},
 					},
 				},
