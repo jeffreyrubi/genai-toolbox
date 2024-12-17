@@ -1,9 +1,9 @@
 # Sources
 
-Sources represent a data source that a tool can interact with. You can define
+A Source represents a data sources that a tool can interact with. You can define
 Sources as a map in the `sources` section of your `tools.yaml` file. Typically,
 a source configuration will contain any information needed to connect with and
-interact with the database. 
+interact with the database.
 
 ```yaml
 sources:
