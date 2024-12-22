@@ -24,7 +24,7 @@ steps:
     args: 
       - -c
       - |
-        go test -race -tags="integration" -v ./...
+        go test -race -v -tags=integration,cloudsql ./tests
 
 availableSecrets:
   secretManager:
@@ -41,4 +41,3 @@ substitutions:
   _DATABASE_NAME: test_database
   _CLOUD_SQL_POSTGRES_REGION: "us-central1"
   _CLOUD_SQL_POSTGRES_INSTANCE: "cloud-sql-pg-testing"
-  
