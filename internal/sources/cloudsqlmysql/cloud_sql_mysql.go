@@ -19,11 +19,10 @@ import (
 	"database/sql"
 	"fmt"
 	"slices"
-	"strings"
 
-	"cloud.google.com/go/cloudsqlconn"
 	"cloud.google.com/go/cloudsqlconn/mysql/mysql"
 	"github.com/googleapis/genai-toolbox/internal/sources"
+	"github.com/googleapis/genai-toolbox/internal/util"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -83,30 +82,20 @@ func (s *Source) MySQLPool() *sql.DB {
 	return s.Pool
 }
 
-func getDialOpts(ipType string) ([]cloudsqlconn.DialOption, error) {
-	switch strings.ToLower(ipType) {
-	case "private":
-		return []cloudsqlconn.DialOption{cloudsqlconn.WithPrivateIP()}, nil
-	case "public":
-		return []cloudsqlconn.DialOption{cloudsqlconn.WithPublicIP()}, nil
-	default:
-		return nil, fmt.Errorf("invalid ipType %s", ipType)
-	}
-}
-
 func initCloudSQLMySQLConnectionPool(ctx context.Context, tracer trace.Tracer, name, project, region, instance, ipType, user, pass, dbname string) (*sql.DB, error) {
 	//nolint:all // Reassigned ctx
 	ctx, span := sources.InitConnectionSpan(ctx, tracer, SourceKind, name)
 	defer span.End()
 
 	// Create a new dialer with options
-	dialOpts, err := getDialOpts(ipType)
+	userAgent := ctx.Value(util.UserAgentKey).(string)
+	opts, err := sources.GetCloudSQLOpts(ipType, userAgent)
 	if err != nil {
 		return nil, err
 	}
 
 	if !slices.Contains(sql.Drivers(), "cloudsql-mysql") {
-		_, err = mysql.RegisterDriver("cloudsql-mysql", cloudsqlconn.WithDefaultDialOptions(dialOpts...))
+		_, err = mysql.RegisterDriver("cloudsql-mysql", opts...)
 		if err != nil {
 			return nil, fmt.Errorf("unable to register driver: %w", err)
 		}
