@@ -178,6 +178,21 @@ steps:
       - |
         go test -race -v -tags=integration,mysql ./tests
 
+  - id: "dgraph"
+    name: golang:1
+    waitFor: ["install-dependencies"]
+    entrypoint: /bin/bash
+    env:
+      - "GOPATH=/gopath"
+      - "DGRAPH_URL=$_DGRAPHURL"
+    volumes:
+      - name: "go"
+        path: "/gopath"
+    args:
+      - -c
+      - |
+        go test -race -v -tags=integration,dgraph ./tests
+
 availableSecrets:
   secretManager:
     - versionName: projects/$PROJECT_ID/secrets/cloud_sql_pg_user/versions/latest
@@ -233,3 +248,4 @@ substitutions:
   _CLOUD_SQL_MYSQL_INSTANCE: "cloud-sql-mysql-testing"
   _MYSQL_HOST: 127.0.0.1
   _MYSQL_PORT: "3306"
+  _DGRAPHURL: "https://play.dgraph.io"
