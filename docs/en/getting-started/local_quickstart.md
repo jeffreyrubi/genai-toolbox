@@ -254,7 +254,7 @@ from Toolbox.
     # from langchain_anthropic import ChatAnthropic
     from langgraph.checkpoint.memory import MemorySaver
     
-    from toolbox_langchain_sdk import ToolboxClient
+    from toolbox_langchain import ToolboxClient
 
     prompt = """
       You're a helpful hotel assistant. You handle hotel searching, booking and
