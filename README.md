@@ -39,7 +39,7 @@ This README provides a brief overview. For comprehensive details, see the full
 Toolbox helps you build Gen AI tools that let your agents access data in your
 database. Toolbox provides:
 - **Simplified development**: Integrate tools to your agent in less than 10
-- lines of code, reuse tools between multiple agents or frameworks, and deploy
+  lines of code, reuse tools between multiple agents or frameworks, and deploy
   new versions of tools more easily.
 - **Better performance**: Best practices such as connection pooling,
   authentication, and more.
