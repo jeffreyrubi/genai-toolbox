@@ -1,72 +1,93 @@
-![toolbox_logo](logo.png)
 
-# 🧰 Toolbox
+# 🧰 Gen AI Toolbox for Databases
 
-> [!CAUTION]
-> Toolbox is experimental and not an official Google product. This is
-> an early access project, intended to be shared under NDA to gather feedback
-> validate direction. You should not share or discuss this project with anyone
-> not under NDA.
+> [!NOTE] 
+> Gen AI Toolbox for Databases is currently in beta, and may see breaking 
+> changes until the first stable release (v1.0).
 
-Toolbox is an open source server that enables developers to build
-production-grade, agent-based generative AI applications that connect to
-databases via tools. It enables you to create database-focused tools
-easier, faster, and more securely by handling the complexities around
+Gen AI Toolbox for Databases is an open source server that makes it easier to
+build Gen AI tools for interacting with databases. It enables you to develop
+tools easier, faster, and more securely by handling the complexities such as
 connection pooling, authentication, and more.
 
-Toolbox also helps simplifies the management of your tools by allowing you to
-add, remove, or update tools without necessarily redeploying your application.
-It sits between your application's orchestration framework (such as LangChain
-and LlamaIndex) and your database, providing a control plane that is used to
-modify, distribute, and invoke tools.
-
-![architecture](architecture.png)
+This README provides a brief overview. For comprehensive details, see the full
+[documentation](https://vigilant-guacamole-plnwrm9.pages.github.io/).
 
 <!-- TOC ignore:true -->
 ## Table of Contents
 
 <!-- TOC -->
 
+- [Why Toolbox?](#why-toolbox)
+- [General Architecture](#general-architecture)
 - [Getting Started](#getting-started)
-  - [Installing the server](#installing-the-server)
-  - [Running the server](#running-the-server)
-  - [Using with Client SDKs](#using-with-client-sdks)
+    - [Installing the server](#installing-the-server)
+    - [Running the server](#running-the-server)
+    - [Integrating your application](#integrating-your-application)
 - [Configuration](#configuration)
-  - [Sources](#sources)
-  - [Tools](#tools)
-  - [Toolsets](#toolsets)
+    - [Sources](#sources)
+    - [Tools](#tools)
+    - [Toolsets](#toolsets)
 - [Versioning](#versioning)
 - [Contributing](#contributing)
 
 <!-- /TOC -->
 
+
+##  Why Toolbox?
+
+Toolbox helps you build Gen AI tools that let your agents access data in your
+database. Toolbox provides:
+- **Simplified development**: Integrate tools to your agent in less than 10
+- lines of code, reuse tools between multiple agents or frameworks, and deploy
+  new versions of tools more easily.
+- **Better performance**: Best practices such as connection pooling,
+  authentication, and more.
+- **Enhanced security**: Integrated auth for more secure access to your data
+- **End-to-end observability**: Out of the box metrics and tracing with built-in
+  support for OpenTelemetry.
+
+
+## General Architecture
+
+Toolbox sits between your application's orchestration framework and your
+database, providing a control plane that is used to modify, distribute, or
+invoke tools. It simplifies the management of your tools by providing you with a
+centralized location to store and update tools, allowing you to share tools
+between agents and applications and update those tools without necessarily
+redeploying your application.
+
+![architecture](./docs/en/getting-started/introduction/architecture.png)
+
 ## Getting Started
 
 ### Installing the server
-<!-- {x-release-please-start-version} -->
 For the latest version, check the [releases page][releases] and use the
 following instructions for your OS and CPU architecture.
+
+[releases]: https://github.com/googleapis/genai-toolbox/releases
 
 <details open>
 <summary>Binary</summary>
 
-[releases]: https://github.com/googleapis/genai-toolbox/releases
+To install Toolbox as a binary:
 
 ```sh
 # see releases page for other versions
-curl -O https://storage.googleapis.com/genai-toolbox/v0.0.1/linux/amd64/toolbox
+export VERSION=0.1.0
+curl -O https://storage.googleapis.com/genai-toolbox/v$VERSION/linux/amd64/toolbox
 chmod +x toolbox
 ```
 
 </details>
 
 <details>
-<summary>Container Images</summary>
+<summary>Container image</summary>
 You can also install Toolbox as a container:
 
 ```sh
 # see releases page for other versions
-export VERSION=0.0.1
+export VERSION=0.1.0
 docker pull us-central1-docker.pkg.dev/database-toolbox/toolbox/toolbox:$VERSION
 ```
 
@@ -76,14 +97,13 @@ docker pull us-central1-docker.pkg.dev/database-toolbox/toolbox/toolbox:$VERSION
 <summary>Compile from source</summary>
 
 To install from source, ensure you have the latest version of
-[Go installed](https://go.dev/doc/install).
+[Go installed](https://go.dev/doc/install), and then run the following command:
 
 ```sh
-go install github.com/googleapis/genai-toolbox@v0.0.1
+go install github.com/googleapis/genai-toolbox@v0.1.0
 ```
 
 </details>
-<!-- {x-release-please-end} -->
 
 ### Running the server
 
@@ -98,11 +118,10 @@ You can use `toolbox help` for a full list of flags! To stop the server, send a
 terminate signal (`ctrl+c` on most platforms).
 
 For more detailed documentation on deploying to different environments, check
-out the following in the `/docs/deploy` folder:
+out the resources in the [How-to
+section](https://vigilant-guacamole-plnwrm9.pages.github.io/how-to/)
 
-- [Cloud Run](./docs/deploy/deploy_toolbox.md).
-
-### Using with Client SDKs
+### Integrating your application
 
 Once your server is up and running, you can load the tools into your
 application. See below the list of Client SDKs for using various frameworks:
@@ -133,10 +152,12 @@ For more detailed instructions on using the Toolbox LangChain, see the
 
 ## Configuration
 
-You can configure what tools are available by updating the `tools.yaml` file. If
-you have multiple files, you can tell toolbox which to load with the
-`--tools_file tools.yaml` flag.
+The primary way to configure Toolbox is through the `tools.yaml` file. If you
+have multiple files, you can tell toolbox which to load with the `--tools_file
+tools.yaml` flag.
 
+You can find more detailed reference documentation to all resource types in the
+[Resources](https://vigilant-guacamole-plnwrm9.pages.github.io/resources/).
 ### Sources
 
 The `sources` section of your `tools.yaml` defines what data sources your
@@ -145,70 +166,39 @@ execute against.
 
 ```yaml
 sources:
-    # This tool kind has some requirements. 
-    # See https://github.com/googleapis/genai-toolbox/blob/main/docs/sources/cloud-sql-pg.md#requirements
-    my-cloud-sql-source:
-        kind: cloud-sql-postgres
-        project: my-project-id
-        region: us-central1
-        instance: my-instance-name
-        user: my-user
-        password: my-password
-        database: my_db
+  my-pg-source:
+    kind: postgres
+    host: 127.0.0.1
+    port: 5432
+    database: toolbox_db
+    user: toolbox_user
+    password: my-password
 ```
 
-Example for Neo4j
-
-```yaml
-sources:
-    my-neo4j-source:
-        kind: neo4j
-        uri: neo4j+s://my-neo4j-host:7687
-        user: neo4j
-        password: my-password
-        database: my_db
-```
-
-For more details on configuring different types of sources, see the [Source
-documentation.](docs/sources/README.md)
+For more details on configuring different types of sources, see the
+[Sources](https://vigilant-guacamole-plnwrm9.pages.github.io/resources/sources/.
 
 ### Tools
 
-The `tools` section of your `tools.yaml` define your tools: what kind of tool it
-is, which source it affects, what parameters it takes, etc.
+The `tools` section of your `tools.yaml` define your the actions your agent can
+take: what kind of tool it is, which source(s) it affects, what parameters it
+uses, etc.
 
 ```yaml
 tools:
-    get_flight_by_id:
-        kind: postgres-sql
-        source: my-cloud-sql-source
-        description: >
-            Use this tool to lookup a flight by its unique identifier.
-        statement: "SELECT * FROM flights WHERE id = $1"
-        parameters:
-        - name: id
-          type: integer
-          description: 'id' represents the unique ID for each flight. 
+  search-hotels-by-name:
+    kind: postgres-sql
+    source: my-pg-source
+    description: Search for hotels based on name.
+    parameters:
+      - name: name
+        type: string
+        description: The name of the hotel.
+    statement: SELECT * FROM hotels WHERE name ILIKE '%' || $1 || '%';
 ```
 
-Neo4j-Cypher Example
-
-```yaml
-tools:
-    get_movies_in_year:
-        kind: neo4j-cypher
-        source: my-neo4j-instance
-        description: >
-            Use this tool to list all movies titles in a given year. 
-        statement: "MATCH (m:Movie) WHERE m.year = $year RETURN m.title"
-        parameters:
-          - name: "year"
-            type: integer
-            description: 'year' represents a 4 digit year since 1900 up to the current year 
-```
-
-For more details on configuring different types of tools, see the [Tool
-documentation.](docs/tools/README.md)
+For more details on configuring different types of tools, see the
+[Tools](https://vigilant-guacamole-plnwrm9.pages.github.io/resources/tools).
 
 
 ### Toolsets
@@ -237,25 +227,17 @@ all_tools = await client.aload_toolset()
 my_second_toolset = await client.aload_toolset("my_second_toolset")
 ```
 
-### AuthSources
-
-The `authSources` section of your `tools.yaml` defines what authentication sources your
-Toolbox should interact with.
-
-```yaml
-authSources:
-  my-google-auth:
-    kind: google
-    clientId: YOUR_GOOGLE_CLIENT_ID
-```
-
-For more details on configuring different types of sources, see the [AuthSources
-documentation](docs/authSources/README.md).
-
 ## Versioning
 
-This project uses [semantic versioning](https://semver.org/), and uses the
-following lifecycle regarding support for a major version.
+This project uses [semantic versioning](https://semver.org/), including a
+`MAJOR.MINOR.PATCH` version number that increments with:
+
+- MAJOR version when we make incompatible API changes
+- MINOR version when we add functionality in a backward compatible manner
+- PATCH version when we make backward compatible bug fixes
+
+The public API that this applies to is the CLI associated with Toolbox, the
+interactions with official SDKs, and the definitions in the `tools.yaml` file. 
 
 ## Contributing
 

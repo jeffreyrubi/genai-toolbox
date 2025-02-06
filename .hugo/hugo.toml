@@ -39,7 +39,10 @@ enableRobotsTXT = true
     sidebar_menu_compact = false
 
 [[menu.main]]
-    name = "GitHub"
-    weight = 50
-    url = "https://github.com/googleapis/genai-toolbox"
-    pre = "<i class='fa-brands fa-github'></i>"
+  name = "GitHub"
+  weight = 50
+  url = "https://github.com/googleapis/genai-toolbox"
+  pre = "<i class='fa-brands fa-github'></i>"
+
+[markup.goldmark.renderer]
+  unsafe= true 

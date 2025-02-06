@@ -7,4 +7,9 @@ description: >
   All of Toolbox's documentation. 
 ---
 
-Placeholder for top-level directory. 
+<html>
+  <head>
+    <link rel="canonical" href="getting-started/introduction/"/>
+    <meta http-equiv="refresh" content="0;url=getting-started/introduction"/>
+  </head>
+</html>
