@@ -24,9 +24,20 @@ steps:
     script: |
       go get -d ./...
 
-  - id: "cloud-sql-pg"
+  - id: "compile-test-binary"
     name: golang:1
     waitFor: ["install-dependencies"]
+    env:
+      - "GOPATH=/gopath"
+    volumes:
+      - name: "go"
+        path: "/gopath"
+    script: |
+      go test -c -race ./tests/...
+
+  - id: "cloud-sql-pg"
+    name: golang:1
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -43,11 +54,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,cloudsqlpg ./tests
+        ./cloudsqlpg.test -test.v
 
   - id: "alloydb-pg"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -64,11 +75,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,alloydb ./tests
+        ./alloydbpg.test -test.v
 
   - id: "alloydb-ai-nl"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -85,11 +96,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,alloydb_ai_nl ./tests
+        ./alloydbainl.test -test.v
 
   - id: "bigtable"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -104,11 +115,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,bigtable ./tests
+        ./bigtable.test -test.v
 
   - id: "bigquery"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -121,11 +132,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,bigquery ./tests
+        ./bigquery.test -test.v
 
   - id: "postgres"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -140,11 +151,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,postgres ./tests
+        ./postgres.test -test.v
 
   - id: "spanner"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -159,11 +170,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,spanner ./tests
+        ./spanner.test -test.v
 
   - id: "neo4j"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -176,11 +187,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,neo4j ./tests
+        ./neo4j.test -test.v
 
   - id: "cloud-sql-mssql"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -197,11 +208,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,cloudsqlmssql ./tests
+        ./cloudsqlmssql.test -test.v
 
   - id: "cloud-sql-mysql"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -218,11 +229,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,cloudsqlmysql ./tests
+        ./cloudsqlmysql.test -test.v
 
   - id: "mysql"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -237,11 +248,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,mysql ./tests
+        ./mysql.test -test.v
 
   - id: "mssql"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -256,11 +267,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,mssql ./tests
+        ./mssql.test -test.v
 
   - id: "dgraph"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -271,11 +282,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,dgraph ./tests
+        ./dgraph.test -test.v
 
   - id: "http"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -286,11 +297,11 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,http ./tests
+        ./http.test -test.v
 
   - id: "sqlite"
     name: golang:1
-    waitFor: ["install-dependencies"]
+    waitFor: ["compile-test-binary"]
     entrypoint: /bin/bash
     env:
       - "GOPATH=/gopath"
@@ -302,7 +313,7 @@ steps:
     args:
       - -c
       - |
-        go test -race -v -tags=integration,sqlite ./tests
+        ./sqlite.test -test.v
 
 availableSecrets:
   secretManager:

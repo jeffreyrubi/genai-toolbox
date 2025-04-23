@@ -1,5 +1,3 @@
-//go:build integration && neo4j
-
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tests
+package neo4j
 
 import (
 	"bytes"
@@ -27,6 +25,8 @@ import (
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/googleapis/genai-toolbox/tests"
 )
 
 var (
@@ -80,7 +80,7 @@ func TestNeo4jToolEndpoints(t *testing.T) {
 			},
 		},
 	}
-	cmd, cleanup, err := StartCmd(ctx, toolsFile, args...)
+	cmd, cleanup, err := tests.StartCmd(ctx, toolsFile, args...)
 	if err != nil {
 		t.Fatalf("command initialization returned an error: %s", err)
 	}
