@@ -22,8 +22,6 @@ import (
 	"fmt"
 
 	"github.com/googleapis/genai-toolbox/internal/tools"
-
-	bigqueryapi "cloud.google.com/go/bigquery"
 )
 
 // GetToolsConfig returns a mock tools config file
@@ -250,55 +248,29 @@ func GetMysqlLAuthToolInfo(tableName string) (string, string, string, []any) {
 	return create_statement, insert_statement, tool_statement, params
 }
 
-// GetSpannerToolInfo returns statements and param for my-param-tool for spanner-sql kind
-func GetSpannerParamToolInfo(tableName string) (string, string, string, map[string]any) {
-	create_statement := fmt.Sprintf("CREATE TABLE %s (id INT64, name STRING(MAX)) PRIMARY KEY (id)", tableName)
-	insert_statement := fmt.Sprintf("INSERT INTO %s (id, name) VALUES (1, @name1), (2, @name2), (3, @name3)", tableName)
-	tool_statement := fmt.Sprintf("SELECT * FROM %s WHERE id = @id OR name = @name", tableName)
-	params := map[string]any{"name1": "Alice", "name2": "Jane", "name3": "Sid"}
-	return create_statement, insert_statement, tool_statement, params
+func GetNonSpannerInvokeParamWant() (string, string) {
+	invokeParamWant := "[{\"id\":1,\"name\":\"Alice\"},{\"id\":3,\"name\":\"Sid\"}]"
+	mcpInvokeParamWant := `{"jsonrpc":"2.0","id":"my-param-tool","result":{"content":[{"type":"text","text":"{\"id\":1,\"name\":\"Alice\"}"},{"type":"text","text":"{\"id\":3,\"name\":\"Sid\"}"}]}}`
+	return invokeParamWant, mcpInvokeParamWant
 }
 
-// GetSpannerAuthToolInfo returns statements and param of my-auth-tool for spanner-sql kind
-func GetSpannerAuthToolInfo(tableName string) (string, string, string, map[string]any) {
-	create_statement := fmt.Sprintf("CREATE TABLE %s (id INT64, name STRING(MAX), email STRING(MAX)) PRIMARY KEY (id)", tableName)
-	insert_statement := fmt.Sprintf("INSERT INTO %s (id, name, email) VALUES (1, @name1, @email1), (2, @name2, @email2)", tableName)
-	tool_statement := fmt.Sprintf("SELECT name FROM %s WHERE email = @email", tableName)
-	params := map[string]any{
-		"name1":  "Alice",
-		"email1": SERVICE_ACCOUNT_EMAIL,
-		"name2":  "Jane",
-		"email2": "janedoe@gmail.com",
-	}
-	return create_statement, insert_statement, tool_statement, params
+// GetPostgresWants return the expected wants for postgres
+func GetPostgresWants() (string, string) {
+	select1Want := "[{\"?column?\":1}]"
+	failInvocationWant := `{"jsonrpc":"2.0","id":"invoke-fail-tool","result":{"content":[{"type":"text","text":"unable to execute query: ERROR: syntax error at or near \"SELEC\" (SQLSTATE 42601)"}],"isError":true}}`
+	return select1Want, failInvocationWant
 }
 
-// GetBigQueryParamToolInfo returns statements and param for my-param-tool for bigquery kind
-func GetBigQueryParamToolInfo(projectID, datasetID, tableName string) (string, string, string, []bigqueryapi.QueryParameter) {
-	createStatement := fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %s (id INT64, name STRING);`, tableName)
-	insertStatement := fmt.Sprintf(`
-		INSERT INTO %s (id, name) VALUES (?, ?), (?, ?), (?, ?);`, tableName)
-	toolStatement := fmt.Sprintf(`SELECT * FROM %s WHERE id = ? OR name = ? ORDER BY id;`, tableName)
-	params := []bigqueryapi.QueryParameter{
-		{Value: int64(1)}, {Value: "Alice"},
-		{Value: int64(2)}, {Value: "Jane"},
-		{Value: int64(3)}, {Value: "Sid"},
-	}
-	return createStatement, insertStatement, toolStatement, params
+// GetMssqlWants return the expected wants for mssql
+func GetMssqlWants() (string, string) {
+	select1Want := "[{\"\":1}]"
+	failInvocationWant := `{"jsonrpc":"2.0","id":"invoke-fail-tool","result":{"content":[{"type":"text","text":"unable to execute query: mssql: Could not find stored procedure 'SELEC'."}],"isError":true}}`
+	return select1Want, failInvocationWant
 }
 
-// GetBigQueryAuthToolInfo returns statements and param of my-auth-tool for bigquery kind
-func GetBigQueryAuthToolInfo(projectID, datasetID, tableName string) (string, string, string, []bigqueryapi.QueryParameter) {
-	createStatement := fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %s (id INT64, name STRING, email STRING)`, tableName)
-	insertStatement := fmt.Sprintf(`
-		INSERT INTO %s (id, name, email) VALUES (?, ?, ?), (?, ?, ?)`, tableName)
-	toolStatement := fmt.Sprintf(`
-		SELECT name FROM %s WHERE email = ?`, tableName)
-	params := []bigqueryapi.QueryParameter{
-		{Value: int64(1)}, {Value: "Alice"}, {Value: SERVICE_ACCOUNT_EMAIL},
-		{Value: int64(2)}, {Value: "Jane"}, {Value: "janedoe@gmail.com"},
-	}
-	return createStatement, insertStatement, toolStatement, params
+// GetMysqlWants return the expected wants for mysql
+func GetMysqlWants() (string, string) {
+	select1Want := "[{\"1\":1}]"
+	failInvocationWant := `{"jsonrpc":"2.0","id":"invoke-fail-tool","result":{"content":[{"type":"text","text":"unable to execute query: Error 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'SELEC 1' at line 1"}],"isError":true}}`
+	return select1Want, failInvocationWant
 }

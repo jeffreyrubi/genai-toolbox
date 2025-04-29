@@ -26,14 +26,8 @@ import (
 	"strings"
 	"testing"
 
-	bigqueryapi "cloud.google.com/go/bigquery"
-	"cloud.google.com/go/spanner"
-	database "cloud.google.com/go/spanner/admin/database/apiv1"
-	"cloud.google.com/go/spanner/admin/database/apiv1/databasepb"
 	"github.com/googleapis/genai-toolbox/internal/server/mcp"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"google.golang.org/api/googleapi"
-	"google.golang.org/api/iterator"
 )
 
 // SetupPostgresSQLTable creates and inserts data into a table of tool
@@ -123,131 +117,6 @@ func SetupMySQLTable(t *testing.T, ctx context.Context, pool *sql.DB, create_sta
 	}
 }
 
-// SetupSpannerTable creates and inserts data into a table of tool
-// compatible with spanner-sql tool
-func SetupSpannerTable(t *testing.T, ctx context.Context, adminClient *database.DatabaseAdminClient, dataClient *spanner.Client, create_statement, insert_statement, tableName, dbString string, params map[string]any) func(*testing.T) {
-
-	// Create table
-	op, err := adminClient.UpdateDatabaseDdl(ctx, &databasepb.UpdateDatabaseDdlRequest{
-		Database:   dbString,
-		Statements: []string{create_statement},
-	})
-	if err != nil {
-		t.Fatalf("unable to start create table operation %s: %s", tableName, err)
-	}
-	err = op.Wait(ctx)
-	if err != nil {
-		t.Fatalf("unable to create test table %s: %s", tableName, err)
-	}
-
-	// Insert test data
-	_, err = dataClient.ReadWriteTransaction(ctx, func(ctx context.Context, txn *spanner.ReadWriteTransaction) error {
-		stmt := spanner.Statement{
-			SQL:    insert_statement,
-			Params: params,
-		}
-		_, err := txn.Update(ctx, stmt)
-		return err
-	})
-	if err != nil {
-		t.Fatalf("unable to insert test data: %s", err)
-	}
-
-	return func(t *testing.T) {
-		// tear down test
-		op, err = adminClient.UpdateDatabaseDdl(ctx, &databasepb.UpdateDatabaseDdlRequest{
-			Database:   dbString,
-			Statements: []string{fmt.Sprintf("DROP TABLE %s", tableName)},
-		})
-		if err != nil {
-			t.Errorf("unable to start drop table operation: %s", err)
-			return
-		}
-
-		err = op.Wait(ctx)
-		if err != nil {
-			t.Errorf("Teardown failed: %s", err)
-		}
-	}
-}
-
-func SetupBigQueryTable(t *testing.T, ctx context.Context, client *bigqueryapi.Client, create_statement, insert_statement, datasetName string, tableName string, params []bigqueryapi.QueryParameter) func(*testing.T) {
-	// Create dataset
-	dataset := client.Dataset(datasetName)
-	_, err := dataset.Metadata(ctx)
-
-	if err != nil {
-		apiErr, ok := err.(*googleapi.Error)
-		if !ok || apiErr.Code != 404 {
-			t.Fatalf("Failed to check dataset %q existence: %v", datasetName, err)
-		}
-		metadataToCreate := &bigqueryapi.DatasetMetadata{Name: datasetName}
-		if err := dataset.Create(ctx, metadataToCreate); err != nil {
-			t.Fatalf("Failed to create dataset %q: %v", datasetName, err)
-		}
-	}
-
-	// Create table
-	createJob, err := client.Query(create_statement).Run(ctx)
-
-	if err != nil {
-		t.Fatalf("Failed to start create table job for %s: %v", tableName, err)
-	}
-	createStatus, err := createJob.Wait(ctx)
-	if err != nil {
-		t.Fatalf("Failed to wait for create table job for %s: %v", tableName, err)
-	}
-	if err := createStatus.Err(); err != nil {
-		t.Fatalf("Create table job for %s failed: %v", tableName, err)
-	}
-
-	// Insert test data
-	insertQuery := client.Query(insert_statement)
-	insertQuery.Parameters = params
-	insertJob, err := insertQuery.Run(ctx)
-	if err != nil {
-		t.Fatalf("Failed to start insert job for %s: %v", tableName, err)
-	}
-	insertStatus, err := insertJob.Wait(ctx)
-	if err != nil {
-		t.Fatalf("Failed to wait for insert job for %s: %v", tableName, err)
-	}
-	if err := insertStatus.Err(); err != nil {
-		t.Fatalf("Insert job for %s failed: %v", tableName, err)
-	}
-
-	return func(t *testing.T) {
-		// tear down table
-		dropSQL := fmt.Sprintf("drop table %s", tableName)
-		dropJob, err := client.Query(dropSQL).Run(ctx)
-		if err != nil {
-			t.Errorf("Failed to start drop table job for %s: %v", tableName, err)
-			return
-		}
-		dropStatus, err := dropJob.Wait(ctx)
-		if err != nil {
-			t.Errorf("Failed to wait for drop table job for %s: %v", tableName, err)
-			return
-		}
-		if err := dropStatus.Err(); err != nil {
-			t.Errorf("Error dropping table %s: %v", tableName, err)
-		}
-
-		// tear down dataset
-		datasetToTeardown := client.Dataset(datasetName)
-		tablesIterator := datasetToTeardown.Tables(ctx)
-		_, err = tablesIterator.Next()
-
-		if err == iterator.Done {
-			if err := datasetToTeardown.Delete(ctx); err != nil {
-				t.Errorf("Failed to delete dataset %s: %v", datasetName, err)
-			}
-		} else if err != nil {
-			t.Errorf("Failed to list tables in dataset %s to check emptiness: %v.", datasetName, err)
-		}
-	}
-}
-
 // RunToolGet runs the tool get endpoint
 func RunToolGetTest(t *testing.T) {
 	// Test tool get endpoint
@@ -297,7 +166,7 @@ func RunToolGetTest(t *testing.T) {
 }
 
 // RunToolInvoke runs the tool invoke endpoint
-func RunToolInvokeTest(t *testing.T, select_1_want string) {
+func RunToolInvokeTest(t *testing.T, select_1_want, invoke_param_want string) {
 	// Get ID token
 	idToken, err := GetGoogleIdToken(ClientId)
 	if err != nil {
@@ -326,7 +195,7 @@ func RunToolInvokeTest(t *testing.T, select_1_want string) {
 			api:           "http://127.0.0.1:5000/api/tool/my-param-tool/invoke",
 			requestHeader: map[string]string{},
 			requestBody:   bytes.NewBuffer([]byte(`{"id": 3, "name": "Alice"}`)),
-			want:          "[{\"id\":1,\"name\":\"Alice\"},{\"id\":3,\"name\":\"Sid\"}]",
+			want:          invoke_param_want,
 			isErr:         false,
 		},
 		{
@@ -425,13 +294,7 @@ func RunToolInvokeTest(t *testing.T, select_1_want string) {
 				t.Fatalf("unable to find result in response body")
 			}
 
-			// Remove `\` and `"` for string comparison
-			got = strings.ReplaceAll(got, "\\", "")
-			want := strings.ReplaceAll(tc.want, "\\", "")
-			got = strings.ReplaceAll(got, "\"", "")
-			want = strings.ReplaceAll(want, "\"", "")
-
-			if got != want {
+			if got != tc.want {
 				t.Fatalf("unexpected value: got %q, want %q", got, tc.want)
 			}
 		})
@@ -439,7 +302,7 @@ func RunToolInvokeTest(t *testing.T, select_1_want string) {
 }
 
 // RunMCPToolCallMethod runs the tool/call for mcp endpoint
-func RunMCPToolCallMethod(t *testing.T, fail_invocation_want string) {
+func RunMCPToolCallMethod(t *testing.T, invoke_param_want, fail_invocation_want string) {
 	// Test tool invoke endpoint
 	invokeTcs := []struct {
 		name          string
@@ -466,7 +329,7 @@ func RunMCPToolCallMethod(t *testing.T, fail_invocation_want string) {
 					},
 				},
 			},
-			want: `{"jsonrpc":"2.0","id":"my-param-tool","result":{"content":[{"type":"text","text":"{\"id\":1,\"name\":\"Alice\"}"},{"type":"text","text":"{\"id\":3,\"name\":\"Sid\"}"}]}}`,
+			want: invoke_param_want,
 		},
 		{
 			name:          "MCP Invoke invalid tool",
@@ -500,7 +363,7 @@ func RunMCPToolCallMethod(t *testing.T, fail_invocation_want string) {
 					"arguments": map[string]any{},
 				},
 			},
-			want: `{"jsonrpc":"2.0","id":"invoke-without-parameter","error":{"code":-32602,"message":"provided parameters were invalid: parameter id is required"}}`,
+			want: `{"jsonrpc":"2.0","id":"invoke-without-parameter","error":{"code":-32602,"message":"provided parameters were invalid: parameter \"id\" is required"}}`,
 		},
 		{
 			name:          "MCP Invoke my-param-tool with insufficient parameters",
@@ -517,7 +380,7 @@ func RunMCPToolCallMethod(t *testing.T, fail_invocation_want string) {
 					"arguments": map[string]any{"id": 1},
 				},
 			},
-			want: `{"jsonrpc":"2.0","id":"invoke-insufficient-parameter","error":{"code":-32602,"message":"provided parameters were invalid: parameter name is required"}}`,
+			want: `{"jsonrpc":"2.0","id":"invoke-insufficient-parameter","error":{"code":-32602,"message":"provided parameters were invalid: parameter \"name\" is required"}}`,
 		},
 		{
 			name:          "MCP Invoke my-fail-tool",
@@ -563,14 +426,8 @@ func RunMCPToolCallMethod(t *testing.T, fail_invocation_want string) {
 			defer resp.Body.Close()
 			got := string(bytes.TrimSpace(respBody))
 
-			// Remove `\` and `"` for string comparison
-			got = strings.ReplaceAll(got, "\\", "")
-			want := strings.ReplaceAll(tc.want, "\\", "")
-			got = strings.ReplaceAll(got, "\"", "")
-			want = strings.ReplaceAll(want, "\"", "")
-
-			if !strings.Contains(got, want) {
-				t.Fatalf("Expected substring not found:\ngot:  %q\nwant: %q (to be contained within got)", got, want)
+			if !strings.Contains(got, tc.want) {
+				t.Fatalf("Expected substring not found:\ngot:  %q\nwant: %q (to be contained within got)", got, tc.want)
 			}
 		})
 	}
