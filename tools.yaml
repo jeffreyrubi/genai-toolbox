@@ -1,0 +1,65 @@
+sources:
+  my-pg-source:
+    kind: postgres
+    host: 127.0.0.1
+    port: 5432
+    database: pagila
+    user: postgres
+    password: postgres
+  
+  my-databricks-source:
+    kind: databricks
+    host: ${DATABRICKS_HOST}  # e.g., "https://adb-6856225216501813.13.azuredatabricks.net:8082"
+    token: ${DATABRICKS_TOKEN}
+    http_path: ${DATABRICKS_HTTP_PATH}  # e.g., "/sql/1.0/warehouses/84c487324df116f0"
+    catalog: system
+    schema: serving
+
+tools:
+  execute_sql_tool:
+    kind: postgres-execute-sql
+    source: my-pg-source
+    description: Use this tool to execute sql statement.
+    
+  # Predefined Databricks SQL queries
+  databricks-list-tables:
+    kind: databricks-sql
+    source: my-databricks-source
+    description: "List all tables in the current Databricks schema"
+    statement: "SHOW TABLES"
+    
+  # databricks-query-sample:
+  #   kind: databricks-sql
+  #   source: my-databricks-source
+  #   description: "Query a table with a specified limit"
+  #   statement: "SELECT * FROM :table_name LIMIT :limit"
+  #   parameters:
+  #     - name: table_name
+  #       type: string
+  #       description: "Name of the table to query"
+  #     - name: limit
+  #       type: integer
+  #       description: "Maximum number of rows to return"
+        
+  # Dynamic SQL execution for Databricks
+  databricks-execute-sql:
+    kind: databricks-execute-sql
+    source: my-databricks-source
+    description: "Execute arbitrary SQL queries against Databricks SQL warehouse"
+    
+  # Table schema tool for Databricks
+  databricks-show-table-schema:
+    kind: databricks-execute-sql
+    source: my-databricks-source
+    description: "Get the schema of a specific table in Databricks"
+    
+toolsets:
+  default:
+    - execute_sql_tool
+    
+  databricks:
+    - databricks-list-tables
+    # - databricks-query-sample
+    - databricks-execute-sql
+    - databricks-show-table-schema
+    

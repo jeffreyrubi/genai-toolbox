@@ -1,0 +1,57 @@
+# Example tools.yaml configuration for Databricks SQL
+
+# Server configuration
+server:
+  address: 0.0.0.0
+  port: 8080
+
+# Configure your Databricks source
+sources:
+  my-databricks-source:
+    kind: databricks
+    host: ${DATABRICKS_HOST}  # e.g., "https://your-workspace.cloud.databricks.com"
+    token: ${DATABRICKS_TOKEN}
+    # You can specify either the full path or just the warehouse ID:
+    # Full path: "/sql/1.0/warehouses/abcdef123456789"
+    # Just ID: "abcdef123456789"
+    # The warehouse ID will be automatically extracted if you provide the full path
+    http_path: ${DATABRICKS_HTTP_PATH}
+    catalog: hive_metastore  # optional
+    schema: default  # optional
+
+# Configure SQL tools using your Databricks source
+tools:
+  list-databases:
+    kind: databricks-sql
+    source: my-databricks-source
+    description: "List all databases in the Databricks workspace"
+    statement: "SHOW DATABASES"
+  
+  list-tables:
+    kind: databricks-sql
+    source: my-databricks-source
+    description: "List tables in the current database"
+    statement: "SHOW TABLES"
+  
+  query-sample-data:
+    kind: databricks-sql
+    source: my-databricks-source
+    description: "Query a sample table with a limit parameter"
+    statement: "SELECT * FROM your_table LIMIT :limit"
+    parameters:
+      - name: limit
+        type: integer
+        description: "Maximum number of rows to return"
+  
+  execute-dynamic-sql:
+    kind: databricks-execute-sql
+    source: my-databricks-source
+    description: "Execute dynamic SQL queries against Databricks"
+
+# Define your toolset
+toolsets:
+  default:
+    - list-databases
+    - list-tables
+    - query-sample-data
+    - execute-dynamic-sql
